@@ -17,9 +17,22 @@ signup_schema = {
     'required': ['username', 'password1', 'password2', 'email']
 }
 
+login_schema = {
+    'type': 'object',
+    'properties': {
+        'username': {'type': 'string'},
+        'password': {'type': 'string'},
+    },
+    'required': ['username', 'password']
+}
+
 
 class SignupInputs(Inputs):
     json = [JsonSchema(schema=signup_schema)]
+
+
+class LoginInputs(Inputs):
+    json = [JsonSchema(schema=login_schema)]
 
 
 @app.route('/api/auth/signup', methods=['POST'])
@@ -44,3 +57,18 @@ def signup():
             return {"mensaje": "\n".join(inputs.errors)}, http.HTTPStatus.BAD_REQUEST.value
     except Exception as e:
         return {"mensaje": str(e)}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    inputs = LoginInputs(request)
+    if inputs.validate():
+        user = User.query.filter(User.username == request.json["username"]).first()
+        if user is None or not user.check_password(request.json["password"]):
+            return {"mensaje": "Usuario o Contraseña incorrectos."}, http.HTTPStatus.UNAUTHORIZED.value
+
+        access_token = create_access_token(identity=user.id)
+        return {"mensaje": "Inicio de sesión exitoso.", "token": access_token}
+
+    else:
+        return {"mensaje": "\n".join(inputs.errors)}, http.HTTPStatus.BAD_REQUEST.value
