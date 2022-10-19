@@ -4,6 +4,7 @@ from sqlalchemy.sql import expression
 import enum
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from marshmallow import fields, Schema
 
 db = SQLAlchemy()
 
@@ -18,7 +19,7 @@ class Formats(enum.Enum):
     WAV = 2
     OGG = 3
     WMA = 4
-    AAC = 5
+    ACC = 5
 
 
 class User(db.Model):
@@ -27,6 +28,7 @@ class User(db.Model):
     email = db.Column(db.String(100), index=True, unique=True)
     password = db.Column(db.String(512))
     status = db.Column(db.Boolean, server_default=expression.true())
+    tasks = db.relationship('Task', cascade='all, delete, delete-orphan')
 
     def set_password(self, password):
         self.password = generate_password_hash(password)
@@ -44,11 +46,11 @@ class Task(db.Model):
     status = db.Column(db.Enum(TaskStatus), default=TaskStatus.UPLOADED)
 
 
-class UserSchema(SQLAlchemyAutoSchema):
-    class Meta:
-        model = User
-        include_relationships = True
-        load_instance = True
+class EnumToDictionary(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        if value is None:
+            return None
+        return {"name": value.name, "value": value.value}
 
 
 class TaskSchema(SQLAlchemyAutoSchema):
@@ -56,3 +58,15 @@ class TaskSchema(SQLAlchemyAutoSchema):
         model = Task
         include_relationships = True
         load_instance = True
+
+    newFormat = EnumToDictionary(attribute=("newFormat"))
+    status = EnumToDictionary(attribute=("status"))
+
+
+class UserSchema(SQLAlchemyAutoSchema):
+    class Meta:
+        model = User
+        include_relationships = True
+        load_instance = True
+
+    tasks = fields.List(fields.Nested(TaskSchema()))

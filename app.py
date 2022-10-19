@@ -9,7 +9,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///user.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = 'frase-secreta'
 app.config['PROPAGATE_EXCEPTIONS'] = True
-
+UPLOAD_FOLDER = 'files'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app_context = app.app_context()
 app_context.push()
 
