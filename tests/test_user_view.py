@@ -4,6 +4,7 @@ import copy
 
 from faker import Faker
 from app import app
+from modelos import db,User,Task
 
 
 class TestUserView(TestCase):
@@ -83,3 +84,8 @@ class TestUserView(TestCase):
 
         self.assertEqual(new_user_2_request.status_code, 400)
         self.assertEqual(response_2.get("mensaje"), "El email ya se encuentra registrado.")
+
+    def tearDown(self):
+        db.session.query(Task).delete()
+        db.session.query(User).delete()
+        db.session.commit()
