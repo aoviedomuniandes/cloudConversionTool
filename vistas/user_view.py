@@ -43,4 +43,4 @@ def signup():
         else:
             return {"mensaje": "\n".join(inputs.errors)}, http.HTTPStatus.BAD_REQUEST.value
     except Exception as e:
-        return {"mensaje": e}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
+        return {"mensaje": str(e)}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
