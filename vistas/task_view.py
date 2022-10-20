@@ -60,3 +60,15 @@ def get_tasks():
     except Exception as e:
         return {"mensaje": str(e)}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
 
+@app.route('/api/task/<int:task_id>', methods=['GET'])
+@jwt_required()
+def get_task(task_id):
+    try:
+        task_schema = TaskSchema()
+        task = Task.query.get_or_404(task_id)
+        print(task)
+        return json.loads(task_schema.dumps(task))
+
+    except Exception as e:
+        return {"mensaje": str(e)}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
+
