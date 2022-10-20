@@ -45,3 +45,16 @@ def add_task():
 
     except Exception as e:
         return {"mensaje": str(e)}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
+
+@app.route('/api/tasks/<int:id_task>', methods=['DELETE'])
+@jwt_required()
+def delete_task(id_task):
+    user_id = get_jwt_identity()
+    # user_info = User.query_or_404(user_id)
+    task = Task.query.get_or_404(id_task)
+
+    db.session.delete(task)
+    db.session.commit()
+
+    return '', 204
+
