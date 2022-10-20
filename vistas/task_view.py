@@ -3,9 +3,11 @@ import os
 from uuid import uuid4
 from flask import request
 from werkzeug.utils import secure_filename
+from flask import jsonify
+import json
 
 from app import app
-from modelos import User, db, Task,TaskSchema
+from modelos import User, db, Task, TaskSchema
 from flask_jwt_extended import create_access_token, jwt_required
 from flask_jwt_extended.utils import get_jwt_identity
 
@@ -45,3 +47,16 @@ def add_task():
 
     except Exception as e:
         return {"mensaje": str(e)}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
+
+@app.route('/api/tasks', methods=['GET'])
+@jwt_required()
+def get_tasks():
+    try:
+        user_id = get_jwt_identity()
+        task_schema = TaskSchema()
+        tasks = [json.loads(task_schema.dumps(task)) for task in Task.query.filter(Task.user == user_id)]
+        return jsonify(tasks)
+
+    except Exception as e:
+        return {"mensaje": str(e)}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
+
