@@ -11,8 +11,8 @@ from vistas import user_view
 class TestUserView(TestCase):
 
     def setUp(self):
-        self.data_factory = Faker()
         app.register_blueprint(user_view, url_prefix='/')
+        self.data_factory = Faker()
         self.client = app.test_client()
 
     def test_signup_when_return_susses(self):
