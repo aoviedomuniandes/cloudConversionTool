@@ -1,24 +1,27 @@
+from celery import Celery
 from flask import Flask
+from extensions import register_extensions
 from modelos import db
 from flask_jwt_extended import JWTManager
+from vistas import register_blueprints
+from config import config
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(config)
+    app.url_map.strict_slashes = False
+
+    register_extensions(app)
+    register_blueprints(app)
+
+    return app
 
 
-app = Flask(__name__)
+def create_worker_app():
+    """Minimal App without routes for celery worker."""
+    app = Flask(__name__)
+    app.config.from_object(config)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///user.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = 'frase-secreta'
-app.config['PROPAGATE_EXCEPTIONS'] = True
+    register_extensions(app, worker=True)
 
-app_context = app.app_context()
-app_context.push()
-
-db.init_app(app)
-db.create_all()
-
-jwt = JWTManager(app)
-
-if __name__ == '__main__':
-    app.run()
-
-from vistas import *  # noqa: F401,F403
+    return app
