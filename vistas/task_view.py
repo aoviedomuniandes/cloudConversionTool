@@ -1,11 +1,7 @@
-
-from datetime import datetime
-from datetime import timedelta
 import subprocess
 import http
 import os
 import time
-from types import NoneType
 from uuid import uuid4
 from extensions import celery
 from flask import request
@@ -17,7 +13,7 @@ from werkzeug.utils import secure_filename
 from celery.result import AsyncResult
 from pathlib import Path
 
-task_view = Blueprint("task_view", __name__,  url_prefix="/api")
+task_view = Blueprint("task_view", __name__, url_prefix="/api")
 task_schema = TaskSchema()
 
 ALLOWED_EXTENSIONS = {'mp3', 'acc', 'ogg', 'wav', 'wma'}
@@ -26,12 +22,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 UPLOAD_FOLDER = BASE_DIR.joinpath("files")
 
 
-
-
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 
 
 @task_view.route('/tasks', methods=['POST'])
@@ -44,24 +37,18 @@ def file_converter():
         file = request.files["fileName"]
         new_format = str(request.form.get("newFormat")).upper()
 
-
         if file and new_format and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                final_name = f"{uuid4()}_{filename}"
-                file.save(os.path.join(BASEDIR + "/files", final_name))
-                new_task = Task(fileName=final_name, newFormat=new_format, user=user_info.id)
-                db.session.add(new_task)
-                db.session.commit()
-                task_celery = add_task.apply_async(args=[new_task.id], link_error=error_handler.s())
-                new_task.idTask = task_celery.id
-                db.session.add(new_task)
-                db.session.commit()
-                return (
-                    jsonify(
-                        {"id_task": new_task.id, "mesagge": "Tarea creada correctamente"}
-                    ),
-                    202,
-                 )
+            filename = secure_filename(file.filename)
+            final_name = f"{uuid4()}_{filename}"
+            file.save(os.path.join(BASEDIR + "/files", final_name))
+            new_task = Task(fileName=final_name, newFormat=new_format, user=user_info.id)
+            db.session.add(new_task)
+            db.session.commit()
+            task_celery = add_task.apply_async(args=[new_task.id], link_error=error_handler.s())
+            new_task.idTask = task_celery.id
+            db.session.add(new_task)
+            db.session.commit()
+            return task_schema.dump(new_task)
     except Exception as e:
         return {"mensaje": str(e)}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
 
@@ -94,16 +81,15 @@ def add_task(self, id_task):
         new_task.status = TaskStatus.PROCESSED
         db.session.commit()
     self.update_state(
-            state="PROGRESS", meta={"fileold": new_task.fileName, "filenew": target_file_path}
+        state="PROGRESS", meta={"fileold": new_task.fileName, "filenew": target_file_path}
     )
-    return {"status": "PROCESSED",  "fileold": new_task.fileName, "filenew": target_file_path}
-
+    return {"status": "PROCESSED", "fileold": new_task.fileName, "filenew": target_file_path}
 
 
 @celery.task
 def error_handler(request, exc, traceback):
     print('Task {0} raised exception: {1!r}\n{2!r}'.format(
-          request.id, exc, traceback))
+        request.id, exc, traceback))
 
 
 @task_view.route("/tasks/<int:id_task>", methods=["GET"])
@@ -115,9 +101,9 @@ def get(id_task):
         task = AsyncResult(task.idTask)
         if task.state == "PENDING":
             # job did not start yet
-            response = {"state": task.state, 
+            response = {"state": task.state,
                         "status": "Pending process...",
-                         "user": user.username ,
+                        "user": user.username,
                         "file_old": task.info.get("fileold", ""),
                         "file_new": task.info.get("filenew", ""),
                         }
@@ -126,11 +112,11 @@ def get(id_task):
             response = {
                 "state": task.state,
                 "status": task.info.get("status", ""),
-                "user": user.username ,
+                "user": user.username,
                 "file_old": task.info.get("fileold", ""),
                 "file_new": task.info.get("filenew", ""),
             }
-           
+
         else:
             # something went wrong in the background job
             response = {
@@ -140,7 +126,3 @@ def get(id_task):
         return jsonify(response)
     else:
         return {"mensaje": "el id_task no existe!"}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
-
-
-
-
