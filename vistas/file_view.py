@@ -1,6 +1,5 @@
 import http
 from flask import request
-from flask_inputs import Inputs
 from flask import Blueprint
 from celery import Celery
 
