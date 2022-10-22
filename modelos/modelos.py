@@ -4,7 +4,7 @@ from sqlalchemy.sql import expression
 import enum
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from marshmallow import fields, Schema
+from marshmallow import fields
 
 db = SQLAlchemy()
 
@@ -19,7 +19,7 @@ class Formats(enum.Enum):
     WAV = 2
     OGG = 3
     WMA = 4
-    ACC = 5
+    AAC = 5
 
 
 class User(db.Model):

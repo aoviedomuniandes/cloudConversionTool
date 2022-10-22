@@ -3,13 +3,18 @@ import os
 from uuid import uuid4
 from flask import request
 from werkzeug.utils import secure_filename
-
+from pathlib import Path
 from app import app
-from modelos import User, db, Task,TaskSchema
+from modelos import User, db, Task, TaskSchema, TaskStatus
 from flask_jwt_extended import create_access_token, jwt_required
 from flask_jwt_extended.utils import get_jwt_identity
+import json
+from task import process_task
 
-ALLOWED_EXTENSIONS = {'mp3', 'acc', 'ogg', 'wav', 'wma'}
+
+ALLOWED_EXTENSIONS = {'mp3', 'aac', 'ogg', 'wav', 'wma'}
+BASE_DIR = Path(__file__).resolve().parent.parent
+UPLOAD_FOLDER = BASE_DIR.joinpath("files")
 
 
 def allowed_file(filename):
@@ -28,15 +33,16 @@ def add_task():
         new_format = str(request.form.get("newFormat")).upper()
 
         if file and new_format and allowed_file(file.filename):
-            #guardamos el archivo
+            # guardamos el archivo
             filename = secure_filename(file.filename)
             final_name = f"{uuid4()}_{filename}"
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], final_name))
-            #guardamos la terea
+            # guardamos la terea
             new_task = Task(fileName=final_name, newFormat=new_format, user=user_info.id)
             db.session.add(new_task)
             db.session.commit()
-            #TODO: enviamos a la cola
+            args = (json.dumps({"taskid": new_task.id}),)
+            process_task.apply_async(args)
             task_schema = TaskSchema()
             return task_schema.dump(new_task)
 

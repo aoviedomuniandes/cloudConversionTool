@@ -1,7 +1,7 @@
+from celery import Celery
 from flask import Flask
 from modelos import db
 from flask_jwt_extended import JWTManager
-
 
 app = Flask(__name__)
 
@@ -13,7 +13,6 @@ UPLOAD_FOLDER = 'files'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app_context = app.app_context()
 app_context.push()
-
 db.init_app(app)
 db.create_all()
 
