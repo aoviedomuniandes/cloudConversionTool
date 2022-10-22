@@ -133,3 +133,9 @@ dmypy.json
 .pyre/
 .idea/
 /user.db
+/audioconverter.db
+audioconverter.db
+
+
+#ignore all files
+files/*
