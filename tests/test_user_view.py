@@ -5,11 +5,13 @@ import copy
 from faker import Faker
 from app import app
 from modelos import db,User,Task
+from vistas import user_view
 
 
 class TestUserView(TestCase):
 
     def setUp(self):
+        app.register_blueprint(user_view, url_prefix='/')
         self.data_factory = Faker()
         self.client = app.test_client()
 

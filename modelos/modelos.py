@@ -38,6 +38,7 @@ class User(db.Model):
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user = db.Column(db.Integer, db.ForeignKey("user.id"))
+    idTask = db.Column(db.String(128))
     fileName = db.Column(db.String(512))
     newFormat = db.Column(db.Enum(Formats))
     timeStamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
