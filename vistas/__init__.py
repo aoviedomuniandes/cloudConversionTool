@@ -1,12 +1,8 @@
-from flask import Flask
 
-from .file_view import file_view
-from .task_view import task_view
-from .user_view import user_view
+import os.path
 
+__all__ = [os.path.basename(p)[:-3]
+           for p in os.listdir(os.path.dirname(__file__))
+           if p.endswith('.py') and not p.startswith('_')]
 
-def register_blueprints(app: Flask) -> None:
-    app.register_blueprint(file_view)
-    app.register_blueprint(task_view)
-    app.register_blueprint(user_view)
 
