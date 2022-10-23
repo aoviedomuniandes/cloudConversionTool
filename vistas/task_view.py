@@ -13,6 +13,7 @@ from flask_jwt_extended.utils import get_jwt_identity
 from werkzeug.utils import secure_filename
 from celery.result import AsyncResult
 from pathlib import Path
+import mimetypes
 
 task_view = Blueprint("task_view", __name__, url_prefix="/api")
 task_schema = TaskSchema()
@@ -21,20 +22,19 @@ ALLOWED_EXTENSIONS = {'mp3', 'acc', 'ogg', 'wav', 'wma'}
 BASEDIR = os.path.abspath(os.path.dirname(__name__))
 BASE_DIR = Path(__file__).resolve().parent.parent
 UPLOAD_FOLDER = BASE_DIR.joinpath("files")
-DOWNLOAD_FOLDER = BASE_DIR.joinpath("files")
-
 
 
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
 def format_task(task, user, idTask):
     if task.state == "PENDING":
         # job did not start yet
-        response = {"state": task.state, 
+        response = {"state": task.state,
                     "status": "Pending process...",
-                        "user": user.username ,
+                    "user": user.username,
                     "file_old": task.info.get("fileold", ""),
                     "file_new": task.info.get("filenew", ""),
                     "id": idTask
@@ -44,12 +44,12 @@ def format_task(task, user, idTask):
         response = {
             "state": task.state,
             "status": task.info.get("status", ""),
-            "user": user.username ,
+            "user": user.username,
             "file_old": task.info.get("fileold", ""),
             "file_new": task.info.get("filenew", ""),
             "id": idTask
         }
-        
+
     else:
         # something went wrong in the background job
         response = {
@@ -57,8 +57,9 @@ def format_task(task, user, idTask):
             "status": str(task.info),
             "id": idTask
         }
-    
+
     return response
+
 
 @task_view.route('/tasks', methods=['POST'])
 @jwt_required()
@@ -144,7 +145,7 @@ def get(id_task):
 def get_tasks():
     args = request.args
 
-    #Handle optional query params
+    # Handle optional query params
     try:
         max = args.getlist("max")[0]
     except IndexError:
@@ -157,10 +158,11 @@ def get_tasks():
     user_id = get_jwt_identity()
     user = User.query.filter(User.id == user_id).first()
     tasks = []
-    
-    #Limit and sort the query results
-    if (int(max) > 0 ):
-        tasks = Task.query.filter(Task.user == user_id).order_by(Task.id.desc() if int(order) == 1 else Task.id.asc()).limit(str(max))
+
+    # Limit and sort the query results
+    if (int(max) > 0):
+        tasks = Task.query.filter(Task.user == user_id).order_by(
+            Task.id.desc() if int(order) == 1 else Task.id.asc()).limit(str(max))
     else:
         tasks = Task.query.filter(Task.user == user_id).order_by(Task.id.desc() if int(order) == 1 else Task.id.asc())
 
@@ -190,19 +192,15 @@ def delete(id_task):
 @task_view.route('/files/<filename>', methods=['GET'])
 @jwt_required()
 def download_task(filename):
-    user_id = get_jwt_identity()
-    user_info = User.query.get_or_404(user_id)
     task = Task.query.filter(filename == filename).first_or_404()
     if task is None:
         return '', 404
     else:
-        if(task.status == TaskStatus.UPLOADED):
+        if task.status == TaskStatus.UPLOADED:
             file_name = task.fileName
             source_file = UPLOAD_FOLDER.joinpath(file_name).resolve()
         else:
-            file_name = task.fileName.split(".", 1)[0]
-            DOWNLOAD_FOLDER = BASE_DIR.joinpath("/download")
-            source_file = DOWNLOAD_FOLDER.joinpath(f"{file_name}.{task.newFormat.name}").resolve()
-        return send_file(open(str(source_file), "rb"), attachment_filename=file_name)
-        # return send_from_directory('UPLOAD_FOLDER', filename, as_attachment=True)
+            source_file = UPLOAD_FOLDER.joinpath(task.fileNameResult).resolve()
+        mimetype = mimetypes.MimeTypes().guess_type(source_file)[0]
+        return send_file(open(str(source_file), "rb"), mimetype=mimetype, attachment_filename=source_file)
     return '', 404
