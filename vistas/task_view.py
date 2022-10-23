@@ -74,7 +74,7 @@ def file_converter():
         if file and new_format and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             final_name = f"{uuid4()}_{filename}"
-            file.save(os.path.join(BASEDIR + "/files", final_name))
+            file.save(os.path.join(BASEDIR, "files", final_name))
             new_task = Task(fileName=final_name, newFormat=new_format, user=user_info.id)
             db.session.add(new_task)
             db.session.commit()

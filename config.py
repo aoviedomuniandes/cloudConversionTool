@@ -12,7 +12,7 @@ class Config(object):
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", os.urandom(16).hex())
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=50)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(minutes=20)
-    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", SQLITE_DB)
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", SQLITE_DB)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # Celery new parameters
     BROKER_URL = os.getenv("BROKER_URL", "redis://localhost:6379/0")
@@ -25,6 +25,7 @@ class Config(object):
     accept_content = ['json']
     enable_utc = True
 
+    #mail_server
     MAIL_ACTIVE_SEND = os.getenv("MAIL_ACTIVE_SEND", True)
     MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.googlemail.com")
     MAIL_PORT=587
