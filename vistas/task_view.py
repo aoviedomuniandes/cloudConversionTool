@@ -181,6 +181,8 @@ def get_tasks():
 @jwt_required()
 def delete(id_task):
     task = Task.query.filter(Task.id == id_task).first()
+    if not task:
+        return '', http.HTTPStatus.NOT_FOUND.value
     if task.status == TaskStatus.PROCESSED:
         if os.path.exists(task.fileNamet):
                     os.remove(task.fileName)
@@ -189,7 +191,7 @@ def delete(id_task):
     db.session.delete(task)
     db.session.commit()
 
-    return '', 204
+    return '', http.HTTPStatus.NO_CONTENT.value
 
 
 @task_view.route('/files/<filename>', methods=['GET'])
@@ -197,7 +199,7 @@ def delete(id_task):
 def download_task(filename):
     task = Task.query.filter(filename == filename).first_or_404()
     if task is None:
-        return '', 404
+        return '', http.HTTPStatus.NOT_FOUND.value
     else:
         if task.status == TaskStatus.UPLOADED:
             file_name = task.fileName
@@ -206,7 +208,6 @@ def download_task(filename):
             source_file = UPLOAD_FOLDER.joinpath(task.fileNameResult).resolve()
         mimetype = mimetypes.MimeTypes().guess_type(source_file)[0]
         return send_file(open(str(source_file), "rb"), mimetype=mimetype, attachment_filename=source_file)
-    return '', 404
 
 
 @task_view.route('/tasks/<int:id_task>', methods=['PUT'])
