@@ -187,17 +187,6 @@ def delete(id_task):
     return '', 204
 
 
-@task_view.route('/tasks/<int:id_task>', methods=['DELETE'])
-@jwt_required()
-def delete(id_task):
-    user_id = get_jwt_identity()
-    task = Task.query.filter(Task.id == id_task).first()
-
-    db.session.delete(task)
-    db.session.commit()
-
-    return '', 204
-
 @task_view.route('/files/<filename>', methods=['GET'])
 @jwt_required()
 def download_task(filename):
