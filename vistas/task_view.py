@@ -5,6 +5,7 @@ import time
 from uuid import uuid4
 from extensions import celery
 from flask import request
+from helper.mail_helper import send_async_email
 from modelos import User, db, Task, TaskSchema, TaskStatus
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required
@@ -22,10 +23,41 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 UPLOAD_FOLDER = BASE_DIR.joinpath("files")
 
 
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def format_task(task, user, idTask):
+    if task.state == "PENDING":
+        # job did not start yet
+        response = {"state": task.state, 
+                    "status": "Pending process...",
+                        "user": user.username ,
+                    "file_old": task.info.get("fileold", ""),
+                    "file_new": task.info.get("filenew", ""),
+                    "id": idTask
+                    }
+
+    elif task.state != "FAILURE":
+        response = {
+            "state": task.state,
+            "status": task.info.get("status", ""),
+            "user": user.username ,
+            "file_old": task.info.get("fileold", ""),
+            "file_new": task.info.get("filenew", ""),
+            "id": idTask
+        }
+        
+    else:
+        # something went wrong in the background job
+        response = {
+            "state": task.state,
+            "status": str(task.info),
+            "id": idTask
+        }
+    
+    return response
 
 @task_view.route('/tasks', methods=['POST'])
 @jwt_required()
@@ -77,9 +109,10 @@ def add_task(self, id_task):
         end = time.perf_counter()
         total_time = end - start
         print(f"Duracion de la tarea: {total_time} ")
-        # update task
+        new_task.fileNameResult = target_file_path
         new_task.status = TaskStatus.PROCESSED
         db.session.commit()
+        send_async_email.apply_async(args=[new_task.id], link_error=error_handler.s())
     self.update_state(
         state="PROGRESS", meta={"fileold": new_task.fileName, "filenew": target_file_path}
     )
@@ -99,33 +132,58 @@ def get(id_task):
     user = User.query.filter(User.id == task.user).first()
     if task is not None:
         task = AsyncResult(task.idTask)
-        if task.state == "PENDING":
-            # job did not start yet
-            response = {"state": task.state,
-                        "status": "Pending process...",
-                        "user": user.username,
-                        "file_old": task.info.get("fileold", ""),
-                        "file_new": task.info.get("filenew", ""),
-                        }
-
-        elif task.state != "FAILURE":
-            response = {
-                "state": task.state,
-                "status": task.info.get("status", ""),
-                "user": user.username,
-                "file_old": task.info.get("fileold", ""),
-                "file_new": task.info.get("filenew", ""),
-            }
-
-        else:
-            # something went wrong in the background job
-            response = {
-                "state": task.state,
-                "status": str(task.info)
-            }
+        response = format_task(task, user, task.id)
         return jsonify(response)
     else:
         return {"mensaje": "el id_task no existe!"}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
+
+
+@task_view.route("/tasks", methods=["GET"])
+@jwt_required()
+def get_tasks():
+    args = request.args
+
+    #Handle optional query params
+    try:
+        max = args.getlist("max")[0]
+    except IndexError:
+        max = 0
+    try:
+        order = args.getlist("order")[0]
+    except IndexError:
+        order = 0
+
+    user_id = get_jwt_identity()
+    user = User.query.filter(User.id == user_id).first()
+    tasks = []
+    
+    #Limit and sort the query results
+    if (int(max) > 0 ):
+        tasks = Task.query.filter(Task.user == user_id).order_by(Task.id.desc() if int(order) == 1 else Task.id.asc()).limit(str(max))
+    else:
+        tasks = Task.query.filter(Task.user == user_id).order_by(Task.id.desc() if int(order) == 1 else Task.id.asc())
+
+    responseList = []
+
+    for task in tasks:
+        idTask = task.id
+        task = AsyncResult(task.idTask)
+        response = format_task(task, user, idTask)
+        responseList.append(response)
+
+    return jsonify(responseList)
+
+
+@task_view.route('/tasks/<int:id_task>', methods=['DELETE'])
+@jwt_required()
+def delete(id_task):
+    user_id = get_jwt_identity()
+    task = Task.query.filter(Task.id == id_task).first()
+
+    db.session.delete(task)
+    db.session.commit()
+
+    return '', 204
 
 
 @task_view.route('/tasks/<int:id_task>', methods=['DELETE'])
