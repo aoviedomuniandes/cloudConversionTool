@@ -7,7 +7,7 @@ from extensions import celery
 from flask import request
 from helper.mail_helper import send_async_email
 from modelos import User, db, Task, TaskSchema, TaskStatus
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, send_from_directory, send_file
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended.utils import get_jwt_identity
 from werkzeug.utils import secure_filename
@@ -21,6 +21,7 @@ ALLOWED_EXTENSIONS = {'mp3', 'acc', 'ogg', 'wav', 'wma'}
 BASEDIR = os.path.abspath(os.path.dirname(__name__))
 BASE_DIR = Path(__file__).resolve().parent.parent
 UPLOAD_FOLDER = BASE_DIR.joinpath("files")
+DOWNLOAD_FOLDER = BASE_DIR.joinpath("files")
 
 
 
@@ -196,3 +197,23 @@ def delete(id_task):
     db.session.commit()
 
     return '', 204
+
+@task_view.route('/files/<filename>', methods=['GET'])
+@jwt_required()
+def download_task(filename):
+    user_id = get_jwt_identity()
+    user_info = User.query.get_or_404(user_id)
+    task = Task.query.filter(filename == filename).first_or_404()
+    if task is None:
+        return '', 404
+    else:
+        if(task.status == TaskStatus.UPLOADED):
+            file_name = task.fileName
+            source_file = UPLOAD_FOLDER.joinpath(file_name).resolve()
+        else:
+            file_name = task.fileName.split(".", 1)[0]
+            DOWNLOAD_FOLDER = BASE_DIR.joinpath("/download")
+            source_file = DOWNLOAD_FOLDER.joinpath(f"{file_name}.{task.newFormat.name}").resolve()
+        return send_file(open(str(source_file), "rb"), attachment_filename=file_name)
+        # return send_from_directory('UPLOAD_FOLDER', filename, as_attachment=True)
+    return '', 404
