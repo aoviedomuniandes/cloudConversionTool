@@ -183,7 +183,11 @@ def delete(id_task):
     task = Task.query.filter(Task.id == id_task).first()
     if not task:
         return '', http.HTTPStatus.NOT_FOUND.value
-
+    if task.status == TaskStatus.PROCESSED:
+        if os.path.exists(task.fileNamet):
+                    os.remove(task.fileName)
+        if os.path.exists(task.fileNameResult):
+                    os.remove(task.fileNameResult)
     db.session.delete(task)
     db.session.commit()
 
@@ -204,4 +208,28 @@ def download_task(filename):
             source_file = UPLOAD_FOLDER.joinpath(task.fileNameResult).resolve()
         mimetype = mimetypes.MimeTypes().guess_type(source_file)[0]
         return send_file(open(str(source_file), "rb"), mimetype=mimetype, attachment_filename=source_file)
-    return '', http.HTTPStatus.NOT_FOUND.value
+
+
+@task_view.route('/tasks/<int:id_task>', methods=['PUT'])
+@jwt_required()
+def put(id_task):
+    update_task = Task.query.filter(Task.id == id_task).first()
+    new_format = str(request.form.get("newFormat")).upper()
+    if update_task is not None:
+        if os.path.exists(update_task.fileNameResult):
+                os.remove(update_task.fileNameResult)
+        update_task.newFormat=new_format
+        update_task.status = TaskStatus.UPLOADED
+        file_name, file_extension = os.path.splitext(update_task.fileName)
+        new_format = f".{update_task.newFormat.name.lower()}"
+        target_file_path = update_task.fileName.replace(file_extension, new_format)
+        update_task.fileNameResult = target_file_path
+        db.session.commit() 
+       
+        task_celery = add_task.apply_async(args=[update_task.id], link_error=error_handler.s())
+        update_task.idTask = task_celery.id
+        db.session.commit()
+
+        return task_schema.dump(update_task)
+    else:
+        return {"mensaje": "el id_task no existe!"}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
