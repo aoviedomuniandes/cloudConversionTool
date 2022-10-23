@@ -2,6 +2,8 @@ import subprocess
 import http
 import os
 import time
+import json
+from types import NoneType
 from uuid import uuid4
 from extensions import celery
 from flask import request
@@ -26,6 +28,36 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def format_task(task, user, idTask):
+    if task.state == "PENDING":
+        # job did not start yet
+        response = {"state": task.state, 
+                    "status": "Pending process...",
+                        "user": user.username ,
+                    "file_old": task.info.get("fileold", ""),
+                    "file_new": task.info.get("filenew", ""),
+                    "id": idTask
+                    }
+
+    elif task.state != "FAILURE":
+        response = {
+            "state": task.state,
+            "status": task.info.get("status", ""),
+            "user": user.username ,
+            "file_old": task.info.get("fileold", ""),
+            "file_new": task.info.get("filenew", ""),
+            "id": idTask
+        }
+        
+    else:
+        # something went wrong in the background job
+        response = {
+            "state": task.state,
+            "status": str(task.info),
+            "id": idTask
+        }
+    
+    return response
 
 @task_view.route('/tasks', methods=['POST'])
 @jwt_required()
@@ -99,30 +131,43 @@ def get(id_task):
     user = User.query.filter(User.id == task.user).first()
     if task is not None:
         task = AsyncResult(task.idTask)
-        if task.state == "PENDING":
-            # job did not start yet
-            response = {"state": task.state,
-                        "status": "Pending process...",
-                        "user": user.username,
-                        "file_old": task.info.get("fileold", ""),
-                        "file_new": task.info.get("filenew", ""),
-                        }
-
-        elif task.state != "FAILURE":
-            response = {
-                "state": task.state,
-                "status": task.info.get("status", ""),
-                "user": user.username,
-                "file_old": task.info.get("fileold", ""),
-                "file_new": task.info.get("filenew", ""),
-            }
-
-        else:
-            # something went wrong in the background job
-            response = {
-                "state": task.state,
-                "status": str(task.info)
-            }
+        response = format_task(task, user, task.id)
         return jsonify(response)
     else:
         return {"mensaje": "el id_task no existe!"}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
+
+
+@task_view.route("/tasks", methods=["GET"])
+@jwt_required()
+def get_tasks():
+    args = request.args
+
+    #Handle optional query params
+    try:
+        max = args.getlist("max")[0]
+    except IndexError:
+        max = 0
+    try:
+        order = args.getlist("order")[0]
+    except IndexError:
+        order = 0
+
+    user_id = get_jwt_identity()
+    user = User.query.filter(User.id == user_id).first()
+    tasks = []
+    
+    #Limit and sort the query results
+    if (int(max) > 0 ):
+        tasks = Task.query.filter(Task.user == user_id).order_by(Task.id.desc() if int(order) == 1 else Task.id.asc()).limit(str(max))
+    else:
+        tasks = Task.query.filter(Task.user == user_id).order_by(Task.id.desc() if int(order) == 1 else Task.id.asc())
+
+    responseList = []
+
+    for task in tasks:
+        idTask = task.id
+        task = AsyncResult(task.idTask)
+        response = format_task(task, user, idTask)
+        responseList.append(response)
+
+    return jsonify(responseList)
