@@ -125,7 +125,7 @@ def error_handler(request, exc, traceback):
         request.id, exc, traceback))
 
 
-@task_view.route("/tasks/<int:id_task>", methods=["GET"])
+@task_view.route('/tasks/<int:id_task>', methods=['GET'])
 @jwt_required()
 def get(id_task):
     task = Task.query.filter(Task.id == id_task).first()
@@ -172,3 +172,27 @@ def get_tasks():
         responseList.append(response)
 
     return jsonify(responseList)
+
+
+@task_view.route('/tasks/<int:id_task>', methods=['DELETE'])
+@jwt_required()
+def delete(id_task):
+    user_id = get_jwt_identity()
+    task = Task.query.filter(Task.id == id_task).first()
+
+    db.session.delete(task)
+    db.session.commit()
+
+    return '', 204
+
+
+@task_view.route('/tasks/<int:id_task>', methods=['DELETE'])
+@jwt_required()
+def delete(id_task):
+    user_id = get_jwt_identity()
+    task = Task.query.filter(Task.id == id_task).first()
+
+    db.session.delete(task)
+    db.session.commit()
+
+    return '', 204
