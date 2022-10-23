@@ -43,6 +43,6 @@ services:
     links:
       - redis
     env_file:
-      - doker.env
+      - docker.env
     depends_on:
       - redis
