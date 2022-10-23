@@ -5,10 +5,10 @@ import subprocess
 import http
 import os
 import time
-from types import NoneType
 from uuid import uuid4
 from extensions import celery
 from flask import request
+from helper.mail_helper import send_async_email
 from modelos import User, db, Task, TaskSchema, TaskStatus
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required
@@ -24,7 +24,6 @@ ALLOWED_EXTENSIONS = {'mp3', 'acc', 'ogg', 'wav', 'wma'}
 BASEDIR = os.path.abspath(os.path.dirname(__name__))
 BASE_DIR = Path(__file__).resolve().parent.parent
 UPLOAD_FOLDER = BASE_DIR.joinpath("files")
-
 
 
 
@@ -90,9 +89,10 @@ def add_task(self, id_task):
         end = time.perf_counter()
         total_time = end - start
         print(f"Duracion de la tarea: {total_time} ")
-        # update task
+        new_task.fileNameResult = target_file_path
         new_task.status = TaskStatus.PROCESSED
         db.session.commit()
+        send_async_email.apply_async(args=[new_task.id], link_error=error_handler.s())
     self.update_state(
             state="PROGRESS", meta={"fileold": new_task.fileName, "filenew": target_file_path}
     )

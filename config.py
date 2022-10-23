@@ -29,6 +29,17 @@ class Config(object):
     accept_content = ['json']
     enable_utc = True   
 
+    MAIL_ACTIVE_SEND = os.getenv("MAIL_ACTIVE_SEND", True)
+    MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.googlemail.com")
+    MAIL_PORT=587
+    MAIL_USE_TLS=True
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME", "misocloudconversiontool@gmail.com")
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "qiprmooobpxvbuea")
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", " misocloudconversiontool@gmail.com")
+
+   
+
+
 
 class DevelopmentConfig(Config):
     DEBUG = True

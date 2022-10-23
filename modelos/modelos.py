@@ -40,6 +40,7 @@ class Task(db.Model):
     user = db.Column(db.Integer, db.ForeignKey("user.id"))
     idTask = db.Column(db.String(128))
     fileName = db.Column(db.String(512))
+    fileNameResult = db.Column(db.String(512))
     newFormat = db.Column(db.Enum(Formats))
     timeStamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     status = db.Column(db.Enum(TaskStatus), default=TaskStatus.UPLOADED)
