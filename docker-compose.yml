@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  web:
+    container_name: web
+    build: .
+    ports:
+      - "5000:5000"
+    links:
+      - redis
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=production
+    volumes:
+      - .app
+
+  redis:
+    container_name: redis
+    image: redis:7.0.5
+    hostname: redis
+
+  worker:
+    build:
+      context: .
+    hostname: worker
+    entrypoint: celery
+    command: -A worker.celery worker --loglevel=info
+    volumes:
+      - ./app
+    links:
+      - redis
+    env_file:
+      - .env
+    depends_on:
+      - redis
