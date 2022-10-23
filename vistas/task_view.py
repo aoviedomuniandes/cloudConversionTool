@@ -180,7 +180,6 @@ def get_tasks():
 @task_view.route('/tasks/<int:id_task>', methods=['DELETE'])
 @jwt_required()
 def delete(id_task):
-    user_id = get_jwt_identity()
     task = Task.query.filter(Task.id == id_task).first()
     if task.status == TaskStatus.PROCESSED:
         if os.path.exists(task.fileNamet):
@@ -212,7 +211,7 @@ def download_task(filename):
 
 @task_view.route('/tasks/<int:id_task>', methods=['PUT'])
 @jwt_required()
-def get(id_task):
+def put(id_task):
     update_task = Task.query.filter(Task.id == id_task).first()
     new_format = str(request.form.get("newFormat")).upper()
     if update_task is not None:
