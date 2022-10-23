@@ -1,6 +1,3 @@
-
-from datetime import datetime
-from datetime import timedelta
 import subprocess
 import http
 import os
@@ -18,15 +15,13 @@ from werkzeug.utils import secure_filename
 from celery.result import AsyncResult
 from pathlib import Path
 
-task_view = Blueprint("task_view", __name__,  url_prefix="/api")
+task_view = Blueprint("task_view", __name__, url_prefix="/api")
 task_schema = TaskSchema()
 
 ALLOWED_EXTENSIONS = {'mp3', 'acc', 'ogg', 'wav', 'wma'}
 BASEDIR = os.path.abspath(os.path.dirname(__name__))
 BASE_DIR = Path(__file__).resolve().parent.parent
 UPLOAD_FOLDER = BASE_DIR.joinpath("files")
-
-
 
 
 def allowed_file(filename):
@@ -64,7 +59,6 @@ def format_task(task, user, idTask):
     
     return response
 
-
 @task_view.route('/tasks', methods=['POST'])
 @jwt_required()
 def file_converter():
@@ -75,24 +69,18 @@ def file_converter():
         file = request.files["fileName"]
         new_format = str(request.form.get("newFormat")).upper()
 
-
         if file and new_format and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                final_name = f"{uuid4()}_{filename}"
-                file.save(os.path.join(BASEDIR + "/files", final_name))
-                new_task = Task(fileName=final_name, newFormat=new_format, user=user_info.id)
-                db.session.add(new_task)
-                db.session.commit()
-                task_celery = add_task.apply_async(args=[new_task.id], link_error=error_handler.s())
-                new_task.idTask = task_celery.id
-                db.session.add(new_task)
-                db.session.commit()
-                return (
-                    jsonify(
-                        {"id_task": new_task.id, "mesagge": "Tarea creada correctamente"}
-                    ),
-                    202,
-                 )
+            filename = secure_filename(file.filename)
+            final_name = f"{uuid4()}_{filename}"
+            file.save(os.path.join(BASEDIR + "/files", final_name))
+            new_task = Task(fileName=final_name, newFormat=new_format, user=user_info.id)
+            db.session.add(new_task)
+            db.session.commit()
+            task_celery = add_task.apply_async(args=[new_task.id], link_error=error_handler.s())
+            new_task.idTask = task_celery.id
+            db.session.add(new_task)
+            db.session.commit()
+            return task_schema.dump(new_task)
     except Exception as e:
         return {"mensaje": str(e)}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
 
@@ -125,16 +113,15 @@ def add_task(self, id_task):
         new_task.status = TaskStatus.PROCESSED
         db.session.commit()
     self.update_state(
-            state="PROGRESS", meta={"fileold": new_task.fileName, "filenew": target_file_path}
+        state="PROGRESS", meta={"fileold": new_task.fileName, "filenew": target_file_path}
     )
-    return {"status": "PROCESSED",  "fileold": new_task.fileName, "filenew": target_file_path}
-
+    return {"status": "PROCESSED", "fileold": new_task.fileName, "filenew": target_file_path}
 
 
 @celery.task
 def error_handler(request, exc, traceback):
     print('Task {0} raised exception: {1!r}\n{2!r}'.format(
-          request.id, exc, traceback))
+        request.id, exc, traceback))
 
 
 @task_view.route("/tasks/<int:id_task>", methods=["GET"])

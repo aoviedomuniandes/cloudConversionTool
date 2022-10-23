@@ -1,3 +1,10 @@
+
+### Install codec FFmpeg
+
+Download FFmpeg https://ffmpeg.org/download.html
+windows download: inscrutcciones para instalar sobre windows https://www.geeksforgeeks.org/how-to-install-ffmpeg-on-windows/
+
+
 ### Create a Python Virtual Environment
 
 Create a Python 3.x virtual environment with:
