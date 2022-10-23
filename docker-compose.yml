@@ -1,9 +1,16 @@
 version: "3.8"
 
+networks:
+  dev_env_network:
+    driver: bridge
+
 services:
   web:
+    image: converttools:1.0.0
     container_name: web
-    build: .
+    build: 
+     context: .
+    command: gunicorn --bind 0.0.0.0:5000 wsgi:app
     ports:
       - "5000:5000"
     links:
@@ -11,28 +18,31 @@ services:
     depends_on:
       - redis
     env_file:
-      - .env
+      - docker.env
     environment:
       - FLASK_ENV=production
     volumes:
       - .app
 
   redis:
-    container_name: redis
-    image: redis:7.0.5
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--bind", "redis", "--port", "6379"]
     hostname: redis
 
   worker:
+    image: converttools:1.0.0
     build:
       context: .
     hostname: worker
     entrypoint: celery
-    command: -A worker.celery worker --loglevel=info
+    command: -A worker.celery worker --loglevel=info --pool=solo
     volumes:
       - ./app
     links:
       - redis
     env_file:
-      - .env
+      - doker.env
     depends_on:
       - redis
