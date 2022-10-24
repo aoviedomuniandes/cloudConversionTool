@@ -1,4 +1,3 @@
-import stat
 import subprocess
 import http
 import os
