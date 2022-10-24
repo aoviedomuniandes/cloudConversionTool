@@ -19,7 +19,7 @@ services:
     environment:
       - FLASK_ENV=production
     volumes:
-      - flask_celery:/usr/src/app
+      - "${DOCKER_WEB_VOLUME:-static_volume:/usr/src/app}"
 
   redis:
     image: redis:latest
@@ -42,7 +42,7 @@ services:
       - redis
       - db
     volumes:
-      - flask_celery:/usr/src/app
+      - "${DOCKER_WEB_VOLUME:-static_volume:/usr/src/app}"
 
   db:
     image: postgres:13-alpine
@@ -58,3 +58,4 @@ networks:
 
 volumes:
   flask_celery:
+  static_volume:
