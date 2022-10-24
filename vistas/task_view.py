@@ -19,7 +19,6 @@ task_view = Blueprint("task_view", __name__, url_prefix="/api")
 task_schema = TaskSchema()
 
 ALLOWED_EXTENSIONS = {'mp3', 'acc', 'ogg', 'wav', 'wma'}
-BASEDIR = os.path.abspath(os.path.dirname(__name__))
 BASE_DIR = Path(__file__).resolve().parent.parent
 UPLOAD_FOLDER = BASE_DIR.joinpath("files")
 
@@ -74,7 +73,7 @@ def file_converter():
         if file and new_format and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             final_name = f"{uuid4()}_{filename}"
-            file.save(os.path.join(BASEDIR, "files", final_name))
+            file.save(os.path.join(UPLOAD_FOLDER, final_name))
             new_task = Task(fileName=final_name, newFormat=new_format, user=user_info.id)
             db.session.add(new_task)
             db.session.commit()
@@ -89,7 +88,9 @@ def file_converter():
 
 @celery.task(bind=True)
 def add_task(self, id_task):
+    print(f"id_task -> {id_task}")
     new_task = Task.query.filter(Task.id == id_task).first()
+    print(f"new task -> {new_task}")
     audio_formats = {
         "mp3": '{} "{}" -q:a 0 -map_metadata 0 -id3v2_version 3 "{}"',
         "wav": '{} "{}" -c:a pcm_s16le -f wav "{}"',
@@ -107,7 +108,7 @@ def add_task(self, id_task):
         new = os.path.join(UPLOAD_FOLDER, target_file_path)
         exec_process = audio_formats[new_task.newFormat.name.lower()].format("ffmpeg -i", old, new)
         print(exec_process)
-        subprocess.run(exec_process)
+        subprocess.call(exec_process, shell=True)
         end = time.perf_counter()
         total_time = end - start
         print(f"Duracion de la tarea: {total_time} ")
