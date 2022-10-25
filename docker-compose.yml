@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  web:
+    image: converttools:1.0.0
+    container_name: web
+    build: .
+    command: gunicorn --bind 0.0.0.0:5000 wsgi:app
+    ports:
+      - "5000:5000"
+    links:
+      - redis
+      - db
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - docker.env
+    environment:
+      - FLASK_ENV=production
+    volumes:
+      - "${DOCKER_WEB_VOLUME:-static_volume:/usr/src/app}"
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--bind", "redis", "--port", "6379"]
+    hostname: redis
+
+  worker:
+    image: converttools:1.0.0
+    build: .
+    hostname: worker
+    command: celery -A worker.celery worker --loglevel=info --pool=solo
+    links:
+      - redis
+      - db
+    env_file:
+      - docker.env
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - "${DOCKER_WEB_VOLUME:-static_volume:/usr/src/app}"
+
+  db:
+    image: postgres:13-alpine
+    hostname: postgres
+    volumes:
+      - flask_celery:/var/lib/postgresql/data/
+    env_file:
+      - postgres.env
+
+networks:
+  dev_env_network:
+    driver: bridge
+
+volumes:
+  flask_celery:
+  static_volume:
