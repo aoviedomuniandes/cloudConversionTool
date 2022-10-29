@@ -11,7 +11,6 @@ def register_extensions(app, worker=False):
     app_context = app.app_context()
     app_context.push()
     
-    mail.init_app(app)
     db.init_app(app)
     db.create_all()
 

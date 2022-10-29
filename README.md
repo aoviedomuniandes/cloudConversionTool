@@ -47,14 +47,15 @@ flask routes
 flask run
 ```
 
-## run docker compose images up
+## star docker compose build
+``` bash
+ docker-compose  up -d --build  
 ```
-docker-compose  up -d --build  
+# down image compose docker
+``` bash
+ docker-compose  up -d --build  
 ```
-## run docker compose images down
-```
-docker-compose down
-```
+
 
 
 

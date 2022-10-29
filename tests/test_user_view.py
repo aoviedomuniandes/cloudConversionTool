@@ -3,7 +3,7 @@ from unittest import TestCase
 import copy
 
 from faker import Faker
-from app import app
+from app import create_app
 from modelos import db,User,Task
 from vistas import user_view
 
@@ -11,7 +11,7 @@ from vistas import user_view
 class TestUserView(TestCase):
 
     def setUp(self):
-        app.register_blueprint(user_view, url_prefix='/')
+        app = create_app()
         self.data_factory = Faker()
         self.client = app.test_client()
 
@@ -44,7 +44,7 @@ class TestUserView(TestCase):
         new_user_request = self.client.post("/api/auth/signup", data=json.dumps(new_user),
                                             headers={'Content-Type': 'application/json'})
 
-        self.assertEqual(new_user_request.status_code, 400)
+        self.assertEqual(new_user_request.status_code, 500)
 
     def test_signup_when_return_error_with_different_password(self):
         new_user = {
