@@ -185,7 +185,7 @@ def delete(id_task):
     if not task:
         return '', http.HTTPStatus.NOT_FOUND.value
     if task.status == TaskStatus.PROCESSED:
-        if os.path.exists(task.fileNamet):
+        if os.path.exists(task.fileName):
             os.remove(task.fileName)
         if os.path.exists(task.fileNameResult):
             os.remove(task.fileNameResult)
@@ -219,11 +219,12 @@ def put(id_task):
     if update_task is not None:
         if os.path.exists(update_task.fileNameResult):
             os.remove(update_task.fileNameResult)
+
         update_task.newFormat = new_format
         update_task.status = TaskStatus.UPLOADED
         file_name, file_extension = os.path.splitext(update_task.fileName)
-        new_format = f".{update_task.newFormat.name.lower()}"
-        target_file_path = update_task.fileName.replace(file_extension, new_format)
+        dot_new_format = f".{new_format.lower()}"
+        target_file_path = update_task.fileName.replace(file_extension, dot_new_format)
         update_task.fileNameResult = target_file_path
         db.session.commit()
 
@@ -234,3 +235,4 @@ def put(id_task):
         return task_schema.dump(update_task)
     else:
         return {"mensaje": "el id_task no existe!"}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
+
