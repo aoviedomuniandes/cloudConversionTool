@@ -47,14 +47,5 @@ flask routes
 flask run
 ```
 
-## run docker compose images up
-```
-docker-compose  up -d --build  
-```
-## run docker compose images down
-```
-docker-compose down
-```
-
 
 
