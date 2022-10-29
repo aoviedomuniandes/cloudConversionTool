@@ -105,7 +105,7 @@ def add_task(self, id_task):
         new = os.path.join(UPLOAD_FOLDER, target_file_path)
         exec_process = audio_formats[new_task.newFormat.name.lower()].format("ffmpeg -i", old, new)
         print(exec_process)
-        subprocess.run(exec_process)
+        subprocess.call(exec_process,shell=True)
         end = time.perf_counter()
         total_time = end - start
         print(f"Duracion de la tarea: {total_time} ")
