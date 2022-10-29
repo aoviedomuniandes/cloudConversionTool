@@ -1,4 +1,3 @@
-from flask import Flask
 
 from .task_view import task_view
 from .user_view import user_view

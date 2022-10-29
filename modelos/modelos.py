@@ -1,3 +1,4 @@
+from enum import Enum
 from flask_sqlalchemy import SQLAlchemy
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from sqlalchemy.sql import expression
@@ -8,21 +9,11 @@ from marshmallow import fields
 
 db = SQLAlchemy()
 
-
-class TaskStatus(enum.Enum):
-    UPLOADED = 1
-    PROCESSED = 2
+class CascadeTypeEnum(Enum):
+    ALL = "all, delete, delete-orphan"
 
 
-class Formats(enum.Enum):
-    MP3 = 1
-    WAV = 2
-    OGG = 3
-    WMA = 4
-    AAC = 5
-
-
-class User(db.Model):
+class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50))
     email = db.Column(db.String(100), index=True, unique=True)
