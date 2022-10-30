@@ -20,7 +20,8 @@ task_schema = TaskSchema()
 
 ALLOWED_EXTENSIONS = {'mp3', 'acc', 'ogg', 'wav', 'wma'}
 BASE_DIR = Path(__file__).resolve().parent.parent
-UPLOAD_FOLDER = BASE_DIR.joinpath("files")
+DEFAULT_UPLOAD_FOLDER = BASE_DIR.joinpath("files")
+UPLOAD_FOLDER = os.getenv("FILES_PATH", DEFAULT_UPLOAD_FOLDER)
 
 
 def allowed_file(filename):
@@ -115,7 +116,8 @@ def add_task(self, id_task):
         new_task.fileNameResult = target_file_path
         new_task.status = TaskStatus.PROCESSED
         db.session.commit()
-        send_async_email.apply_async(args=[new_task.id], link_error=error_handler.s())
+        if os.getenv("FLASK_ENV","") != "production":
+            send_async_email.apply_async(args=[new_task.id], link_error=error_handler.s())
     self.update_state(
         state="PROGRESS", meta={"fileold": new_task.fileName, "filenew": target_file_path}
     )
@@ -201,14 +203,14 @@ def download_task(filename):
     task = Task.query.filter(filename == filename).first_or_404()
     if task is None:
         return '', http.HTTPStatus.NOT_FOUND.value
+
+    if task.status == TaskStatus.UPLOADED:
+        file_name = task.fileName
+        source_file = Path(UPLOAD_FOLDER).joinpath(file_name).resolve()
     else:
-        if task.status == TaskStatus.UPLOADED:
-            file_name = task.fileName
-            source_file = UPLOAD_FOLDER.joinpath(file_name).resolve()
-        else:
-            source_file = UPLOAD_FOLDER.joinpath(task.fileNameResult).resolve()
-        mimetype = mimetypes.MimeTypes().guess_type(source_file)[0]
-        return send_file(open(str(source_file), "rb"), mimetype=mimetype, attachment_filename=source_file)
+        source_file = Path(UPLOAD_FOLDER).joinpath(task.fileNameResult).resolve()
+    mimetype = mimetypes.MimeTypes().guess_type(source_file)[0]
+    return send_file(open(str(source_file), "rb"), mimetype=mimetype, attachment_filename=source_file)
 
 
 @task_view.route('/tasks/<int:id_task>', methods=['PUT'])
@@ -235,4 +237,3 @@ def put(id_task):
         return task_schema.dump(update_task)
     else:
         return {"mensaje": "el id_task no existe!"}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
-

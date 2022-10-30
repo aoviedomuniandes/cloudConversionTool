@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--bind", "redis", "--port", "6379"]
+    hostname: redis
+
+  db:
+    image: postgres:13-alpine
+    ports:
+      - "5432:5432"
+    hostname: postgres
+    env_file:
+      - postgres.env
+
+networks:
+  dev_env_network:
+    driver: bridge
+
