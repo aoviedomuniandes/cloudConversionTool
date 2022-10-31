@@ -18,7 +18,7 @@ import mimetypes
 task_view = Blueprint("task_view", __name__, url_prefix="/api")
 task_schema = TaskSchema()
 
-ALLOWED_EXTENSIONS = {'mp3', 'acc', 'ogg', 'wav', 'wma'}
+ALLOWED_EXTENSIONS = {'mp3', 'aac', 'ogg', 'wav', 'wma'}
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_UPLOAD_FOLDER = BASE_DIR.joinpath("files")
 UPLOAD_FOLDER = os.getenv("FILES_PATH", DEFAULT_UPLOAD_FOLDER)
