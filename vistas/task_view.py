@@ -14,15 +14,13 @@ from werkzeug.utils import secure_filename
 from celery.result import AsyncResult
 from pathlib import Path
 import mimetypes
+from helper.gcloud import GCloudClient
+import tempfile
 
 task_view = Blueprint("task_view", __name__, url_prefix="/api")
 task_schema = TaskSchema()
 
 ALLOWED_EXTENSIONS = {'mp3', 'aac', 'ogg', 'wav', 'wma'}
-BASE_DIR = Path(__file__).resolve().parent.parent
-DEFAULT_UPLOAD_FOLDER = BASE_DIR.joinpath("files")
-UPLOAD_FOLDER = os.getenv("FILES_PATH", DEFAULT_UPLOAD_FOLDER)
-
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -68,14 +66,15 @@ def file_converter():
         user_id = get_jwt_identity()
         user_info = User.query.get_or_404(user_id)
 
-        file = request.files["fileName"]
+        file_request = request.files["fileName"]
         new_format = str(request.form.get("newFormat")).upper()
 
-        if file and new_format and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
+        if file_request and new_format and allowed_file(file_request.filename):
+            filename = secure_filename(file_request.filename)
             final_name = f"{uuid4()}_{filename}"
-            file.save(os.path.join(UPLOAD_FOLDER, final_name))
-            new_task = Task(fileName=final_name, newFormat=new_format, user=user_info.id)
+            google_client = GCloudClient()
+            bucket_path = google_client.upload_from_file_to_bucket(blob_name=final_name, path_to_file=file_request)
+            new_task = Task(fileName=bucket_path, newFormat=new_format, user=user_info.id)
             db.session.add(new_task)
             db.session.commit()
             task_celery = add_task.apply_async(args=[new_task.id], link_error=error_handler.s())
@@ -89,9 +88,7 @@ def file_converter():
 
 @celery.task(bind=True)
 def add_task(self, id_task):
-    print(f"id_task -> {id_task}")
     new_task = Task.query.filter(Task.id == id_task).first()
-    print(f"new task -> {new_task}")
     audio_formats = {
         "mp3": '{} "{}" -q:a 0 -map_metadata 0 -id3v2_version 3 "{}"',
         "wav": '{} "{}" -c:a pcm_s16le -f wav "{}"',
@@ -99,23 +96,32 @@ def add_task(self, id_task):
         "ogg": '{} "{}" -c:a libvorbis "{}"',
         "wma": '{} "{}" -c:a wmav2 "{}"',
     }
-    file_name, file_extension = os.path.splitext(new_task.fileName)
+
+    google_client = GCloudClient()
+    old_file = google_client.download_file_to_bucket(resource_name=new_task.fileName)
+    file_name, file_extension = os.path.splitext(old_file)
     new_format = f".{new_task.newFormat.name.lower()}"
     target_file_path = new_task.fileName.replace(file_extension, new_format)
 
     if new_task.newFormat.name.lower() in audio_formats:
         start = time.perf_counter()
-        old = os.path.join(UPLOAD_FOLDER, new_task.fileName)
-        new = os.path.join(UPLOAD_FOLDER, target_file_path)
-        exec_process = audio_formats[new_task.newFormat.name.lower()].format("ffmpeg -i", old, new)
+        new = os.path.join(tempfile.gettempdir(), target_file_path)
+        exec_process = audio_formats[new_task.newFormat.name.lower()].format("ffmpeg -i", old_file, new)
         print(exec_process)
         subprocess.call(exec_process, shell=True)
         end = time.perf_counter()
         total_time = end - start
         print(f"Duracion de la tarea: {total_time} ")
-        new_task.fileNameResult = target_file_path
+        resource_name = google_client.upload_from_filename_to_bucket(blob_name=target_file_path,path_to_file=new)
+        new_task.fileNameResult = resource_name
         new_task.status = TaskStatus.PROCESSED
         db.session.commit()
+
+        if os.path.exists(old_file):
+            os.remove(old_file)
+        if os.path.exists(new):
+            os.remove(new)     
+
         if os.getenv("FLASK_ENV","") != "production":
             send_async_email.apply_async(args=[new_task.id], link_error=error_handler.s())
     self.update_state(
@@ -200,15 +206,18 @@ def delete(id_task):
 @task_view.route('/files/<filename>', methods=['GET'])
 @jwt_required()
 def download_task(filename):
-    task = Task.query.filter(filename == filename).first_or_404()
-    if task is None:
+    task_query = Task.query.filter(Task.fileName == filename).first()
+    google_client = GCloudClient()
+    if task_query is None:
         return '', http.HTTPStatus.NOT_FOUND.value
 
-    if task.status == TaskStatus.UPLOADED:
-        file_name = task.fileName
-        source_file = Path(UPLOAD_FOLDER).joinpath(file_name).resolve()
+    if task_query.status == TaskStatus.UPLOADED:
+        file_name = task_query.fileName
     else:
-        source_file = Path(UPLOAD_FOLDER).joinpath(task.fileNameResult).resolve()
+        file_name = task_query.fileNameResult
+
+    temporal_path = google_client.download_file_to_bucket(resource_name=file_name)
+    source_file = temporal_path.resolve()    
     mimetype = mimetypes.MimeTypes().guess_type(source_file)[0]
     return send_file(open(str(source_file), "rb"), mimetype=mimetype, attachment_filename=source_file)
 
@@ -237,3 +246,6 @@ def put(id_task):
         return task_schema.dump(update_task)
     else:
         return {"mensaje": "el id_task no existe!"}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
+
+
+
