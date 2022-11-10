@@ -232,16 +232,20 @@ def download_task(filename):
 def put(id_task):
     update_task = Task.query.filter(Task.id == id_task).first()
     new_format = str(request.form.get("newFormat")).upper()
+
     if update_task is not None:
-        if os.path.exists(update_task.fileNameResult):
-            os.remove(update_task.fileNameResult)
+
+        google_client = GCloudClient()
+
+        if update_task.fileNameResult is not None:
+            google_client.delete_file_to_bucket(update_task.fileNameResult)
 
         update_task.newFormat = new_format
         update_task.status = TaskStatus.UPLOADED
         file_name, file_extension = os.path.splitext(update_task.fileName)
         dot_new_format = f".{new_format.lower()}"
         target_file_path = update_task.fileName.replace(file_extension, dot_new_format)
-        update_task.fileNameResult = target_file_path
+        update_task.fileNameResult = None
         db.session.commit()
 
         task_celery = add_task.apply_async(args=[update_task.id], link_error=error_handler.s())
