@@ -192,11 +192,16 @@ def delete(id_task):
     task = Task.query.filter(Task.id == id_task).first()
     if not task:
         return '', http.HTTPStatus.NOT_FOUND.value
+
+    google_client = GCloudClient()
+
     if task.status == TaskStatus.PROCESSED:
-        if os.path.exists(task.fileName):
-            os.remove(task.fileName)
-        if os.path.exists(task.fileNameResult):
-            os.remove(task.fileNameResult)
+        if task.fileName is not None:
+            google_client.delete_file_to_bucket(task.fileName)
+
+        if task.fileNameResult is not None:
+            google_client.delete_file_to_bucket(task.fileNameResult)
+            
     db.session.delete(task)
     db.session.commit()
 
