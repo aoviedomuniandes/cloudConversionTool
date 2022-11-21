@@ -77,10 +77,13 @@ def file_converter():
             new_task = Task(fileName=bucket_path, newFormat=new_format, user=user_info.id)
             db.session.add(new_task)
             db.session.commit()
-            task_celery = add_task.apply_async(args=[new_task.id], link_error=error_handler.s())
-            new_task.idTask = task_celery.id
-            db.session.add(new_task)
-            db.session.commit()
+
+            google_client.send_task(task_id=new_task.id,file=new_task.fileName,new_format=new_format)
+
+            # task_celery = add_task.apply_async(args=[new_task.id], link_error=error_handler.s())
+            # new_task.idTask = task_celery.id
+            # db.session.add(new_task)
+            # db.session.commit()
             return task_schema.dump(new_task)
     except Exception as e:
         return {"mensaje": str(e)}, http.HTTPStatus.INTERNAL_SERVER_ERROR.value
