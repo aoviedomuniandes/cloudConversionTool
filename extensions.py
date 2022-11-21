@@ -27,7 +27,7 @@ def register_extensions(app, worker=False):
     celery.config_from_object(app.config)
 
     # Add a flask route to expose information
-    app.add_url_rule("/healthcheck", "healthcheck", view_func=health.run)
+    app.add_url_rule("/", "", view_func=health.run)
 
     if not worker:
         # register celery irrelevant extensions
