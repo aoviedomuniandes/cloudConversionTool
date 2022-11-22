@@ -26,3 +26,16 @@ threads = 25
 
 # Store the process ID of gunicorn.  Used for testing.
 pidfile = 'gunicorn_pid.txt'
+
+raw_env = [
+    'FLASK_ENV=production',
+    'FLASK_APP=app:create_app',
+    'DATABASE_URL=postgresql://postgres:6Fh:DghpiXJ%aNtL#wYP@34.27.199.35:5432/cloudconversiontools',
+    'timezone=America/Bogota',
+    'MAIL_SERVER=smtp.googlemail.com',
+    'MAIL_PORT=587',
+    'MAIL_USE_TLS=True',
+    'MAIL_USERNAME=misocloudconversiontool@gmail.com',
+    'MAIL_PASSWORD=qiprmooobpxvbuea',
+    'MAIL_DEFAULT_SENDER=misocloudconversiontool@gmail.com',
+]
