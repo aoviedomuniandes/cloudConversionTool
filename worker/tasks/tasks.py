@@ -39,31 +39,31 @@ def process_task(json_data,app):
     with app.app_context():
         new_task = Task.query.filter(Task.id == data.get("idTask")).first()
 
-    google_client = GCloudClient()
-    old_file = google_client.download_file_to_bucket(resource_name=new_task.fileName)
-    file_name, file_extension = os.path.splitext(old_file)
-    new_format = f".{new_task.newFormat.name.lower()}"
-    target_file_path = new_task.fileName.replace(file_extension, new_format)
+        google_client = GCloudClient()
+        old_file = google_client.download_file_to_bucket(resource_name=new_task.fileName)
+        file_name, file_extension = os.path.splitext(old_file)
+        new_format = f".{new_task.newFormat.name.lower()}"
+        target_file_path = new_task.fileName.replace(file_extension, new_format)
 
-    if new_task.newFormat.name.lower() in audio_formats:
-        start = time.perf_counter()
-        new = os.path.join(tempfile.gettempdir(), target_file_path)
-        exec_process = audio_formats[new_task.newFormat.name.lower()].format("ffmpeg -i", old_file, new)
-        print(exec_process)
-        subprocess.call(exec_process, shell=True)
-        end = time.perf_counter()
-        total_time = end - start
-        print(f"Duracion de la tarea: {total_time} ")
+        if new_task.newFormat.name.lower() in audio_formats:
+            start = time.perf_counter()
+            new = os.path.join(tempfile.gettempdir(), target_file_path)
+            exec_process = audio_formats[new_task.newFormat.name.lower()].format("ffmpeg -i", old_file, new)
+            print(exec_process)
+            subprocess.call(exec_process, shell=True)
+            end = time.perf_counter()
+            total_time = end - start
+            print(f"Duracion de la tarea: {total_time} ")
 
-        resource_name = google_client.upload_from_filename_to_bucket(blob_name=target_file_path, path_to_file=new)
-        new_task.fileNameResult = resource_name
-        new_task.status = TaskStatus.PROCESSED
-        db.session.commit()
+            resource_name = google_client.upload_from_filename_to_bucket(blob_name=target_file_path, path_to_file=new)
+            new_task.fileNameResult = resource_name
+            new_task.status = TaskStatus.PROCESSED
+            db.session.commit()
 
-        if os.path.exists(old_file):
-            os.remove(old_file)
-        if os.path.exists(new):
-            os.remove(new)
+            if os.path.exists(old_file):
+                os.remove(old_file)
+            if os.path.exists(new):
+                os.remove(new)
 
-        if os.getenv("FLASK_ENV", "") != "production":
-            send_email(new_task)
+            if os.getenv("FLASK_ENV", "") != "production":
+                send_email(new_task)
