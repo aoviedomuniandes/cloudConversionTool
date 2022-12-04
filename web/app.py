@@ -3,7 +3,6 @@ from extensions import register_extensions
 from vistas import register_blueprints
 from config import config
 
-
 def create_app():
     app = Flask(__name__)
     app.config.from_object(config)
@@ -11,15 +10,5 @@ def create_app():
 
     register_extensions(app)
     register_blueprints(app)
-
-    return app
-
-
-def create_worker_app():
-    """Minimal App without routes for celery worker."""
-    app = Flask(__name__)
-    app.config.from_object(config)
-
-    register_extensions(app, worker=True)
 
     return app
