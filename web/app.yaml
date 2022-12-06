@@ -1,0 +1,28 @@
+service: cloudconversiontool-api
+runtime: python310
+entrypoint: gunicorn -b :$PORT "app:create_app()"
+liveness_check:
+  path: "/"
+readiness_check:
+  path: "/"
+instance_class: f2  
+
+env_variables:
+  FLASK_ENV: production
+  FLASK_APP: app:create_app
+  DATABASE_URL: postgresql://postgres:6Fh:DghpiXJ%aNtL#wYP@34.27.199.35:5432/cloudconversiontools
+  timezone: America/Bogota
+  MAIL_SERVER: smtp.googlemail.com
+  MAIL_PORT: 587
+  MAIL_USE_TLS: True
+  MAIL_USERNAME: misocloudconversiontool@gmail.com
+  MAIL_PASSWORD: qiprmooobpxvbuea
+  MAIL_DEFAULT_SENDER: misocloudconversiontool@gmail.com
+  SECRET_KEY: change_me
+  JWT_SECRET_KEY: secrect_key
+  TEMP: /tmp
+  TMPDIR: /tmp
+
+
+
+
