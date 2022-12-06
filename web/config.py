@@ -1,7 +1,7 @@
 from datetime import timedelta
 import os
 
-BASEDIR = os.path.abspath(os.path.dirname(__name__))
+BASEDIR = '/tmp'
 SQLITE_DB = SQLITE_DB = "sqlite:///" + os.path.join(BASEDIR, "audioconverter.db")
 
 

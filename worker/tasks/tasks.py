@@ -2,18 +2,15 @@ import codecs
 import json
 import os
 import subprocess
-import tempfile
 import time
 from pathlib import Path
 
 from flask_mail import Message
-
-from extensions import mail
 from helper.gcloud import GCloudClient
+from extensions import mail
 from modelos import db, Task, TaskStatus, User
 
 SUBJECT = "ConversionTool: Notificación de finalización de conversión de archivo de audio"
-BASE_DIR = Path(__file__).resolve().parent.parent
 audio_formats = {
     "mp3": '{} "{}" -q:a 0 -map_metadata 0 -id3v2_version 3 "{}"',
     "wav": '{} "{}" -c:a pcm_s16le -f wav "{}"',
@@ -25,7 +22,7 @@ audio_formats = {
 
 def send_email(task):
     user = User.query.filter(User.id == task.user).first()
-    template = os.path.join(BASE_DIR,"helper", "template.html")
+    template = os.path.join("helper", "template.html")
     file = codecs.open(template, "r", 'utf-8')
     message = file.read()
     message = message.replace("{user}", user.username).replace("{file}", task.fileNameResult)
@@ -47,7 +44,7 @@ def process_task(json_data,app):
 
         if new_task.newFormat.name.lower() in audio_formats:
             start = time.perf_counter()
-            new = os.path.join(tempfile.gettempdir(), target_file_path)
+            new = os.path.join('/tmp', target_file_path)
             exec_process = audio_formats[new_task.newFormat.name.lower()].format("ffmpeg -i", old_file, new)
             print(exec_process)
             subprocess.call(exec_process, shell=True)
@@ -67,3 +64,4 @@ def process_task(json_data,app):
 
             if os.getenv("FLASK_ENV", "") != "production":
                 send_email(new_task)
+

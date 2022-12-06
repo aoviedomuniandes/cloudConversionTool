@@ -1,4 +1,3 @@
-import tempfile
 import os
 from pathlib import Path
 import json
@@ -30,7 +29,7 @@ class GCloudClient:
         storage_client = storage.Client.from_service_account_json('miso-grupo-2.json')
         bucket = storage_client.get_bucket(bucket_name)
         blob = bucket.blob(resource_name)
-        str_path = "{}/{}".format(tempfile.gettempdir(), resource_name)
+        str_path = "{}/{}".format('/tmp', resource_name)
         blob.download_to_filename(str_path)
         return Path(str_path)
 
